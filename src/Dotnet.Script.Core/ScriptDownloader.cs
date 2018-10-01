@@ -1,14 +1,16 @@
 ﻿using System;
-using System.IO;
 using System.Net.Http;
-using System.Net.Mime;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
 namespace Dotnet.Script.Core
 {
     public class ScriptDownloader
     {
-        public async Task<string> Download(string uri)
+        public Task<string> Download(string uri) =>
+            Download(uri, (_, text) => text);
+
+        public async Task<T> Download<T>(string uri, Func<HttpContentHeaders, string, T> resultor)
         {
             const string plainTextMediaType = "text/plain";
             using (HttpClient client = new HttpClient())
@@ -23,7 +25,7 @@ namespace Dotnet.Script.Core
 
                         if (string.IsNullOrWhiteSpace(mediaType) || mediaType.Equals(plainTextMediaType, StringComparison.InvariantCultureIgnoreCase))
                         {
-                            return await content.ReadAsStringAsync();
+                            return resultor(content.Headers, await content.ReadAsStringAsync());
                         }
 
                         throw new NotSupportedException($"The media type '{mediaType}' is not supported when executing a script over http/https");

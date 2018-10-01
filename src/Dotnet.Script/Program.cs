@@ -253,14 +253,26 @@ namespace Dotnet.Script
                     {
                         string absoluteSourcePath = null;
                         Uri scriptUrl = null;
+                        var remoteScript = new
+                        {
+                            FileName = default(string),
+                            Expires = default(DateTimeOffset?),
+                            LastModified = default(DateTimeOffset?),
+                        };
                         SourceText code;
+
                         if (!File.Exists(file.Value))
                         {
                             if (TryParseHttpUrl(file.Value, out scriptUrl))
                             {
                                 var downloader = new ScriptDownloader();
-                                var rawCode = await downloader.Download(file.Value);
-                                code = SourceText.From(rawCode);
+                                (code, remoteScript) = await downloader.Download(file.Value, (headers, rawCode) =>
+                                    (SourceText.From(rawCode), new
+                                    {
+                                        headers.ContentDisposition?.FileName,
+                                        headers.Expires,
+                                        headers.LastModified
+                                    }));
                             }
                             else
                             {
